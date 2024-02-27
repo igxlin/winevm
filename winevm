@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+
+set -e
+
+PROJ_DIR="$HOME/.winevm"
+WINES_DIR="$HOME/.winevm/wines"
+BIN_DIR="$HOME/.winevm/shims"
+WINE_VERSION_FILE="$PROJ_DIR/.wine-version"
+
+usage () {
+    cat <<-EOF
+Usage:
+    winevm install <version>
+        Install specific version of wine-staging.
+
+    winevm use <system or version>
+        Use system wine or installed wine.
+
+    winevm list
+        List all wines installed.
+EOF
+
+    exit 0
+}
+
+use () {
+    check_arg 1
+
+    local version=$1
+    echo $version > "$WINE_VERSION_FILE"
+
+    exit 0
+}
+
+check_arg () {
+    local min_num=$(( $1 ))
+    if [ $# -lt $min_num ]; then
+        >&2 usage
+        exit 1
+    fi
+}
+
+runthis () {
+    set -x
+    "$@"
+    set +x
+}
+
+download_url () {
+    local version="$1"
+    echo "https://github.com/Kron4ek/Wine-Builds/releases/download/$version/wine-$version-staging-amd64.tar.xz"
+}
+
+install () {
+    check_arg 1
+
+    local version="$1"
+    local tempfile="$(mktemp)"
+    local url="$(download_url $version)"
+
+    runthis curl -L \
+        --output "$tempfile" "$url"
+
+    mkdir -p "$WINES_DIR"
+    tar xf "$tempfile" --directory="$WINES_DIR"
+
+    rm -rf "$tempfile"
+    exit 0
+}
+
+list () {
+    ls "$WINES_DIR"
+    exit 0
+}
+
+shellenv () {
+    cat <<-EOF
+export PATH="$BIN_DIR:$PATH"
+EOF
+    exit 0
+}
+
+$@
+usage

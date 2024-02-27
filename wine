@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+set -e
+
+PROJ_DIR="$HOME/.winevm"
+WINES_DIR="$PROJ_DIR/wines"
+GLOBAL_VERSION_FILE="$PROJ_DIR/.wine-version"
+
+version () {
+    if [ -r '.wine-version' ]; then
+        cat .wine-version
+        return
+    fi
+
+    if [ -r "$GLOBAL_VERSION_FILE" ]; then
+        cat "$GLOBAL_VERSION_FILE"
+        return
+    fi
+
+    echo 'system'
+}
+
+system_wine () {
+    if [ -x /usr/bin/wine ]; then
+        echo /usr/bin/wine
+        return
+    fi
+
+    >&2 echo 'unable to find system wine'
+    exit 1
+}
+
+managed_wine () {
+    local path="$WINES_DIR/wine-$(version)-staging-amd64/bin/wine"
+    if [ ! -x "$path" ]; then
+        >&2 echo "unable to find wine with version: $(version)"
+        exit 1
+    fi
+
+    echo $path
+}
+
+wine () {
+    if [ $(version) = 'system' ]; then
+        echo $(system_wine)
+        return
+    fi
+
+    echo $(managed_wine)
+}
+
+exec $(wine) $@
